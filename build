@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+usage()
+{
+    echo "Usage: $0 <pc | raspi> <build | clippy | release>"
+    exit 1
+}
+
+case "$1" in
+p*)
+    tgt="x86_64-unknown-linux-gnu"
+    ;;
+r*)
+    tgt="armv7-unknown-linux-gnueabihf"
+    ;;
+*)
+    usage
+    ;;
+esac
+
+flags="--target $tgt"
+case "$2" in
+b*)
+    set -x
+    cargo build $flags
+    ;;
+c*)
+    set -x
+    cargo clippy $flags
+    ;;
+r*)
+    set -x
+    cargo build $flags --release
+    ;;
+*)
+    usage
+    ;;
+esac
+exit 0
+# EOF
