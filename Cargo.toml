@@ -8,8 +8,14 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = "1"
+coap = "0"
+coap-lite = "0"
+env_logger = "0"
+log = "0"
 rumqttc = "0"
 serde_json = "1"
+shellexpand = "2"
+structopt = "0"
 
 [build-dependencies]
 build-data = "0"
