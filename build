@@ -20,18 +20,19 @@ r*)
 esac
 
 flags="--target $tgt"
+set -x
 case "$2" in
 b*)
-    set -x
     cargo build $flags
     ;;
 c*)
-    set -x
     cargo clippy $flags
     ;;
 r*)
-    set -x
     cargo build $flags --release
+    ;;
+s*)
+    rsync -varze ssh target/armv7-unknown-linux-gnueabihf/release/mqtt2coap zigbee@rpi2:
     ;;
 *)
     usage
