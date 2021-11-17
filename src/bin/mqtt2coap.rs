@@ -45,12 +45,13 @@ fn main() -> anyhow::Result<()> {
                     let json: Value = serde_json::from_str(&msg).unwrap_or_else(|_| json!({}));
                     debug!("Json #{} = {} -- {:?}", i, topic, json);
                     for k in [
-                        "temperature",
-                        "pressure",
-                        "humidity",
                         "battery",
+                        "humidity",
                         "linkquality",
+                        "pressure",
                         "state",
+                        "temperature",
+                        "voltage",
                     ] {
                         if let Some(v) = json.get(k) {
                             let key = format!("{}/{}", topic, k);
