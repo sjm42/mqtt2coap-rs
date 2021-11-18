@@ -27,59 +27,76 @@ fn main() -> anyhow::Result<()> {
     // Iterate to poll the eventloop for connection progress
     for (i, notification) in connection.iter().enumerate() {
         let event = notification?;
-        match &event {
-            Event::Incoming(ev) => {
-                if let Packet::PingResp = *ev {
-                } else {
-                    debug!("Notification #{} = {:?}", i, &event);
-                }
-
-                if let Packet::Publish(p) = ev {
-                    debug!("Publish #{} = {:?}", i, p);
-                    let mut topic = p.topic.as_str();
-                    if let Some(i) = topic.find('/') {
-                        topic = &topic[i + 1..];
-                    }
-                    let msg = String::from_utf8_lossy(&p.payload);
-                    debug!("Payload #{} = {} -- {}", i, topic, msg);
-                    let json: Value = serde_json::from_str(&msg).unwrap_or_else(|_| json!({}));
-                    debug!("Json #{} = {} -- {:?}", i, topic, json);
-                    for k in [
-                        "battery",
-                        "humidity",
-                        "linkquality",
-                        "pressure",
-                        "state",
-                        "temperature",
-                        "voltage",
-                    ] {
-                        if let Some(v) = json.get(k) {
-                            let key = format!("{}/{}", topic, k);
-                            if let Some(f) = v.as_f64() {
-                                send_value(&opts.coap_url, key, f);
-                            } else if let Some(s) = v.as_str() {
-                                let f: f64 = match s.to_ascii_lowercase().as_str() {
-                                    "on" => 1.0,
-                                    "off" => 0.0,
-                                    _ => -1.0,
-                                };
-                                send_value(&opts.coap_url, key, f);
-                            }
-                        }
-                    }
-                }
+        if let Event::Incoming(ev) = &event {
+            if let Packet::PingResp = *ev {
+                // Sigh, we don't have if not let...
+            } else {
+                // Debug output all events except ping
+                debug!("Notification #{} = {:?}", i, &event);
             }
-            Event::Outgoing(_) => {}
+
+            if let Packet::Publish(p) = ev {
+                // Whoa, we actually have a message to process
+                debug!("Publish #{} = {:?}", i, p);
+                let mut topic = p.topic.as_str();
+                if let Some(i) = topic.find('/') {
+                    // ignore all chars from topic until first '/' if there is one
+                    topic = &topic[i + 1..];
+                }
+                let msg = String::from_utf8_lossy(&p.payload);
+                debug!("Payload #{} = {} -- {}", i, topic, msg);
+                handle_msg(&opts, &topic, &msg);
+            }
         }
     }
     Ok(())
 }
 
-fn send_value<S1: AsRef<str>, S2: AsRef<str>>(url: S1, key: S2, value: f64) {
+fn handle_msg<S1: AsRef<str>, S2: AsRef<str>>(opts: &OptsCommon, topic: S1, msg: S2) {
+    let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
+    debug!("Json = {} -- {:?}", topic.as_ref(), json);
+    for (k, v) in json.as_object().unwrap() {
+        info!("JSON {:?} = {:?}", k, v);
+        let key = format!("{}/{}", topic.as_ref(), k);
+        let mut f: f64 = 0.0;
+        let mut can_send = false;
+        if v.is_f64() {
+            f = v.as_f64().unwrap();
+            can_send = true;
+        } else if v.is_i64() {
+            f = v.as_i64().unwrap() as f64;
+            can_send = true;
+        } else if v.is_u64() {
+            f = v.as_u64().unwrap() as f64;
+            can_send = true;
+        } else if v.is_boolean() {
+            f = 0.0;
+            if v.as_bool().unwrap() {
+                f = 1.0;
+            }
+            can_send = true;
+        } else if v.is_string() {
+            let s = v.as_str().unwrap();
+            f = match s.to_ascii_lowercase().as_str() {
+                "on" | "1" | "true" => 1.0,
+                _ => 0.0,
+            };
+            can_send = true;
+        }
+        if can_send {
+            send_value(opts, &key, f);
+        }
+    }
+}
+
+fn send_value<S: AsRef<str>>(opts: &OptsCommon, key: S, value: f64) {
     let coap_payload = format!("{} {:.2}", key.as_ref(), value);
-    info!("*** SEND {} <-- {}", url.as_ref(), coap_payload);
-    let coap_result =
-        CoAPClient::post_with_timeout(url.as_ref(), coap_payload.into_bytes(), Duration::new(2, 0));
+    info!("*** SEND {} <-- {}", &opts.coap_url, coap_payload);
+    let coap_result = CoAPClient::post_with_timeout(
+        &opts.coap_url,
+        coap_payload.into_bytes(),
+        Duration::new(2, 0),
+    );
     if let Err(e) = coap_result {
         error!("CoAP error: {:?}", e);
     }
