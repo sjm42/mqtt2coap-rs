@@ -6,7 +6,7 @@ use log::*;
 use rumqttc::{Client, Event, MqttOptions, Packet, QoS};
 use serde_json::json;
 use serde_json::Value;
-use std::time::Duration;
+use std::{fmt::Display, time::Duration};
 use structopt::StructOpt;
 
 use mqtt2coap::*;
@@ -21,7 +21,7 @@ fn main() -> anyhow::Result<()> {
 
     let (mut client, mut connection) = Client::new(mqttoptions, 10);
     for topic in opts.topics.split(',') {
-        client.subscribe(format!("zigbee2mqtt/{}", topic), QoS::AtMostOnce)?;
+        client.subscribe(format!("zigbee2mqtt/{topic}"), QoS::AtMostOnce)?;
     }
 
     // Iterate to poll the eventloop for connection progress
@@ -31,33 +31,37 @@ fn main() -> anyhow::Result<()> {
             if let Packet::PingResp = *ev {
                 // Sigh, we don't have if not let...
             } else {
-                // Debug output all events except ping
-                debug!("Notification #{} = {:?}", i, &event);
+                // Debug output all events except ping response
+                debug!("Notification #{i} = {event:?}");
             }
 
             if let Packet::Publish(p) = ev {
                 // Whoa, we actually have a message to process
-                debug!("Publish #{} = {:?}", i, p);
+                debug!("Publish #{i} = {p:?}");
                 let mut topic = p.topic.as_str();
                 if let Some(i) = topic.find('/') {
                     // ignore all chars from topic until first '/' if there is one
                     topic = &topic[i + 1..];
                 }
                 let msg = String::from_utf8_lossy(&p.payload);
-                debug!("Payload #{} = {} -- {}", i, topic, msg);
-                handle_msg(&opts, &topic, &msg);
+                debug!("Payload #{i} = {topic} -- {msg}");
+                handle_msg(&opts, topic, msg);
             }
         }
     }
     Ok(())
 }
 
-fn handle_msg<S1: AsRef<str>, S2: AsRef<str>>(opts: &OptsCommon, topic: S1, msg: S2) {
+fn handle_msg<S1, S2>(opts: &OptsCommon, topic: S1, msg: S2)
+where
+    S1: AsRef<str> + Display,
+    S2: AsRef<str> + Display,
+{
     let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
-    debug!("Json = {} -- {:?}", topic.as_ref(), json);
+    debug!("Json = {topic} -- {json:?}");
     for (k, v) in json.as_object().unwrap() {
-        info!("JSON {:?} = {:?}", k, v);
-        let key = format!("{}/{}", topic.as_ref(), k);
+        info!("JSON {k:?} = {v:?}");
+        let key = format!("{topic}/{k}");
         let mut f: f64 = 0.0;
         let mut can_send = false;
         if v.is_f64() {
@@ -89,16 +93,16 @@ fn handle_msg<S1: AsRef<str>, S2: AsRef<str>>(opts: &OptsCommon, topic: S1, msg:
     }
 }
 
-fn send_value<S: AsRef<str>>(opts: &OptsCommon, key: S, value: f64) {
-    let coap_payload = format!("{} {:.2}", key.as_ref(), value);
-    info!("*** SEND {} <-- {}", &opts.coap_url, coap_payload);
-    let coap_result = CoAPClient::post_with_timeout(
-        &opts.coap_url,
-        coap_payload.into_bytes(),
-        Duration::new(2, 0),
-    );
+fn send_value<S>(opts: &OptsCommon, key: S, value: f64)
+where
+    S: AsRef<str> + Display,
+{
+    let payload = format!("{key} {value:.2}");
+    let url = &opts.coap_url;
+    info!("*** SEND {url} <-- {payload}");
+    let coap_result = CoAPClient::post_with_timeout(url, payload.into_bytes(), Duration::new(2, 0));
     if let Err(e) = coap_result {
-        error!("CoAP error: {:?}", e);
+        error!("CoAP error: {e:?}");
     }
 }
 // EOF
