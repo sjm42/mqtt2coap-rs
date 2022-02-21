@@ -142,7 +142,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a4ef1b5546f6ba554509aa8eab047d71088e79f908dbd4a5d6dcf9610b616de"
 dependencies = [
  "bytes",
- "coap-lite",
+ "coap-lite 0.7.0",
  "futures",
  "log",
  "num-derive",
@@ -160,6 +160,12 @@ name = "coap-lite"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2911526fe9fc3bb90ff13ff52bd5454e93da0685ba8ed105f06bfc0e898fd950"
+
+[[package]]
+name = "coap-lite"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e30817aa19b8f5815bdbe6ee9b752b834a0bb40ef4e7fbd51f61014c9c83b52"
 
 [[package]]
 name = "concurrent-queue"
@@ -458,7 +464,7 @@ dependencies = [
  "anyhow",
  "build-data",
  "coap",
- "coap-lite",
+ "coap-lite 0.8.0",
  "env_logger",
  "log",
  "rumqttc",
