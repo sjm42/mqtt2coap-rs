@@ -163,9 +163,12 @@ checksum = "2911526fe9fc3bb90ff13ff52bd5454e93da0685ba8ed105f06bfc0e898fd950"
 
 [[package]]
 name = "coap-lite"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fa1d1df3de26ab9f13899c4f0a2467d3b018069642dd4ec34b3871b2edb13ad"
+checksum = "e39d3884fe7bef2d0dc01ec4596ed66244a402700099b5066056d48e2409b5a2"
+dependencies = [
+ "lru_time_cache",
+]
 
 [[package]]
 name = "concurrent-queue"
@@ -424,6 +427,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lru_time_cache"
+version = "0.11.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9106e1d747ffd48e6be5bb2d97fa706ed25b144fbee4d5c02eae110cd8d6badd"
+
+[[package]]
 name = "matches"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -465,7 +474,7 @@ dependencies = [
  "anyhow",
  "build-data",
  "coap",
- "coap-lite 0.8.1",
+ "coap-lite 0.9.0",
  "env_logger",
  "log",
  "rumqttc",
@@ -892,9 +901,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a65b3f4ffa0092e9887669db0eae07941f023991ab58ea44da8fe8e2d511c6b"
+checksum = "1e59d925cf59d8151f25a3bedf97c9c157597c9df7324d32d68991cc399ed08b"
 dependencies = [
  "proc-macro2",
  "quote",
