@@ -3,7 +3,7 @@
 // use anyhow::anyhow;
 use coap::CoAPClient;
 use log::*;
-use rumqttc::{Client, Event, MqttOptions, Packet, QoS};
+use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
 use serde_json::json;
 use serde_json::Value;
 use std::{fmt::Display, time::Duration};
@@ -16,20 +16,40 @@ fn main() -> anyhow::Result<()> {
     opts.finish()?;
     start_pgm(&opts, "mqtt2coap");
     debug!("Runtime config:\n{opts:#?}");
+
+    let runtime = tokio::runtime::Runtime::new()?;
+
     let mut mqttoptions = MqttOptions::new("mqtt2coap", &opts.mqtt_host, opts.mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(25));
 
-    let (mut client, mut connection) = Client::new(mqttoptions, 10);
-    for topic in opts.topics.split(',') {
+    let (client, eventloop) = AsyncClient::new(mqttoptions, 42);
+    runtime.block_on(async move {
+        run_mqtt(
+            client,
+            eventloop,
+            opts.topics.to_owned(),
+            opts.coap_url.to_owned(),
+        )
+        .await
+    })
+}
+
+async fn run_mqtt(
+    client: AsyncClient,
+    mut eventloop: EventLoop,
+    topics: String,
+    coap_url: String,
+) -> anyhow::Result<()> {
+    for topic in topics.split(',') {
         let topic = format!("zigbee2mqtt/{topic}");
         debug!("Subscribing topic {topic}");
-        client.subscribe(&topic, QoS::AtLeastOnce)?;
+        client.subscribe(&topic, QoS::AtLeastOnce).await?;
     }
 
     // Iterate to poll the eventloop for connection progress
-    for (i, notification) in connection.iter().enumerate() {
-        debug!("mqtt notification: {notification:?}");
-        let event = notification?;
+    let i: usize = 0;
+    loop {
+        let event = eventloop.poll().await?;
         debug!("mqtt event: {event:?}");
         if let Event::Incoming(ev) = &event {
             if let Packet::PingResp = *ev {
@@ -49,17 +69,17 @@ fn main() -> anyhow::Result<()> {
                 }
                 let msg = String::from_utf8_lossy(&p.payload);
                 debug!("Payload #{i} = {topic} -- {msg}");
-                handle_msg(&opts, topic, msg);
+                handle_msg(&coap_url, topic, msg);
             }
         }
     }
-    Ok(())
 }
 
-fn handle_msg<S1, S2>(opts: &OptsCommon, topic: S1, msg: S2)
+fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3)
 where
     S1: AsRef<str> + Display,
     S2: AsRef<str> + Display,
+    S3: AsRef<str> + Display,
 {
     let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
     debug!("Json = {topic} -- {json:?}");
@@ -92,19 +112,20 @@ where
             can_send = true;
         }
         if can_send {
-            send_value(opts, &key, f);
+            coap_send(coap_url.as_ref(), &key, f);
         }
     }
 }
 
-fn send_value<S>(opts: &OptsCommon, key: S, value: f64)
+fn coap_send<S1, S2>(url: S1, key: S2, value: f64)
 where
-    S: AsRef<str> + Display,
+    S1: AsRef<str> + Display,
+    S2: AsRef<str> + Display,
 {
     let payload = format!("{key} {value:.2}");
-    let url = &opts.coap_url;
     info!("*** SEND {url} <-- {payload}");
-    let coap_result = CoAPClient::post_with_timeout(url, payload.into_bytes(), Duration::new(2, 0));
+    let coap_result =
+        CoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(2, 0));
     if let Err(e) = coap_result {
         error!("CoAP error: {e:?}");
     }
