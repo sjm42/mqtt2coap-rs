@@ -15,18 +15,22 @@ fn main() -> anyhow::Result<()> {
     let mut opts = OptsCommon::from_args();
     opts.finish()?;
     start_pgm(&opts, "mqtt2coap");
-
+    debug!("Runtime config:\n{opts:#?}");
     let mut mqttoptions = MqttOptions::new("mqtt2coap", &opts.mqtt_host, opts.mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(25));
 
     let (mut client, mut connection) = Client::new(mqttoptions, 10);
     for topic in opts.topics.split(',') {
-        client.subscribe(format!("zigbee2mqtt/{topic}"), QoS::AtMostOnce)?;
+        let topic = format!("zigbee2mqtt/{topic}");
+        debug!("Subscribing topic {topic}");
+        client.subscribe(&topic, QoS::AtLeastOnce)?;
     }
 
     // Iterate to poll the eventloop for connection progress
     for (i, notification) in connection.iter().enumerate() {
+        debug!("mqtt notification: {notification:?}");
         let event = notification?;
+        debug!("mqtt event: {event:?}");
         if let Event::Incoming(ev) = &event {
             if let Packet::PingResp = *ev {
                 // Sigh, we don't have if not let...
