@@ -13,7 +13,7 @@ pub struct OptsCommon {
     #[structopt(short, long)]
     pub trace: bool,
 
-    #[structopt(long, short = "h", default_value = "localhost")]
+    #[structopt(long, short = "m", default_value = "localhost")]
     pub mqtt_host: String,
     #[structopt(long, short = "p", default_value = "1883")]
     pub mqtt_port: u16,
