@@ -34,13 +34,14 @@ async fn run_mqtt(
     let prefix = &opts.topic_prefix;
     for topic in opts.topics.split(',') {
         let s_topic = format!("{prefix}{topic}");
-        debug!("Subscribing topic {s_topic}");
+        info!("Subscribing topic {s_topic}");
         client.subscribe(&s_topic, QoS::AtLeastOnce).await?;
     }
 
     // Iterate to poll the eventloop for connection progress
-    let i: usize = 0;
+    let mut i: usize = 0;
     loop {
+        i += 1;
         let event = eventloop.poll().await?;
         trace!("mqtt event: {event:?}");
         if let Event::Incoming(ev) = &event {
