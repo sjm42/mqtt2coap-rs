@@ -23,34 +23,26 @@ fn main() -> anyhow::Result<()> {
     mqttoptions.set_keep_alive(Duration::from_secs(25));
 
     let (client, eventloop) = AsyncClient::new(mqttoptions, 42);
-    runtime.block_on(async move {
-        run_mqtt(
-            client,
-            eventloop,
-            opts.topics.to_owned(),
-            opts.coap_url.to_owned(),
-        )
-        .await
-    })
+    runtime.block_on(async move { run_mqtt(&opts, client, eventloop).await })
 }
 
 async fn run_mqtt(
+    opts: &OptsCommon,
     client: AsyncClient,
     mut eventloop: EventLoop,
-    topics: String,
-    coap_url: String,
 ) -> anyhow::Result<()> {
-    for topic in topics.split(',') {
-        let topic = format!("zigbee2mqtt/{topic}");
-        debug!("Subscribing topic {topic}");
-        client.subscribe(&topic, QoS::AtLeastOnce).await?;
+    let prefix = &opts.topic_prefix;
+    for topic in opts.topics.split(',') {
+        let s_topic = format!("{prefix}{topic}");
+        debug!("Subscribing topic {s_topic}");
+        client.subscribe(&s_topic, QoS::AtLeastOnce).await?;
     }
 
     // Iterate to poll the eventloop for connection progress
     let i: usize = 0;
     loop {
         let event = eventloop.poll().await?;
-        debug!("mqtt event: {event:?}");
+        trace!("mqtt event: {event:?}");
         if let Event::Incoming(ev) = &event {
             if let Packet::PingResp = *ev {
                 // Sigh, we don't have if not let...
@@ -61,7 +53,7 @@ async fn run_mqtt(
 
             if let Packet::Publish(p) = ev {
                 // Whoa, we actually have a message to process
-                debug!("Publish #{i} = {p:?}");
+                info!("Publish #{i} = {p:?}");
                 let mut topic = p.topic.as_str();
                 if let Some(i) = topic.find('/') {
                     // ignore all chars from topic until first '/' if there is one
@@ -69,7 +61,7 @@ async fn run_mqtt(
                 }
                 let msg = String::from_utf8_lossy(&p.payload);
                 debug!("Payload #{i} = {topic} -- {msg}");
-                handle_msg(&coap_url, topic, msg);
+                handle_msg(&opts.coap_url, topic, msg);
             }
         }
     }
@@ -84,7 +76,7 @@ where
     let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
     debug!("Json = {topic} -- {json:?}");
     for (k, v) in json.as_object().unwrap() {
-        info!("JSON {k:?} = {v:?}");
+        debug!("JSON {k:?} = {v:?}");
         let key = format!("{topic}/{k}");
         let mut f: f64 = 0.0;
         let mut can_send = false;
@@ -123,7 +115,7 @@ where
     S2: AsRef<str> + Display,
 {
     let payload = format!("{key} {value:.2}");
-    info!("*** SEND {url} <-- {payload}");
+    info!("*** CoAP POST {url} <-- {payload}");
     let coap_result =
         CoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(2, 0));
     if let Err(e) = coap_result {
