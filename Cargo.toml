@@ -16,7 +16,7 @@ rumqttc = "0.13"
 serde_json = "1.0"
 shellexpand = "2.1"
 structopt = "0.3"
-tokio = "1.20"
+tokio = "1.17"
 
 [build-dependencies]
 build-data = "0.1"
