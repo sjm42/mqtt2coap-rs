@@ -3,7 +3,7 @@ authors = ["Sami J. Mäkinen <sjm@iki.fi>"]
 edition = "2021"
 readme = "README.md"
 name = "mqtt2coap"
-version = "0.1.1"
+version = "0.1.2"
 
 
 [dependencies]
@@ -16,7 +16,7 @@ rumqttc = "0.13"
 serde_json = "1.0"
 shellexpand = "2.1"
 structopt = "0.3"
-tokio = "1.17"
+tokio = "1.20"
 
 [build-dependencies]
 build-data = "0.1"
