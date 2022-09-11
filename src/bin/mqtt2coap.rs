@@ -1,6 +1,7 @@
 // main.rs
 
-// use anyhow::anyhow;
+// use anyhow::bail;
+use anyhow::anyhow;
 use coap::CoAPClient;
 use log::*;
 use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
@@ -14,7 +15,7 @@ use mqtt2coap::*;
 fn main() -> anyhow::Result<()> {
     let mut opts = OptsCommon::from_args();
     opts.finish()?;
-    start_pgm(&opts, "mqtt2coap");
+    opts.start_pgm(env!("CARGO_BIN_NAME"));
     debug!("Runtime config:\n{opts:#?}");
 
     let runtime = tokio::runtime::Runtime::new()?;
@@ -32,6 +33,7 @@ async fn run_mqtt(
     mut eventloop: EventLoop,
 ) -> anyhow::Result<()> {
     let prefix = &opts.topic_prefix;
+
     for topic in opts.topics.split(',') {
         let s_topic = format!("{prefix}{topic}");
         info!("Subscribing topic {s_topic}");
@@ -45,30 +47,34 @@ async fn run_mqtt(
         let event = eventloop.poll().await?;
         trace!("mqtt event: {event:?}");
         if let Event::Incoming(ev) = &event {
-            if let Packet::PingResp = *ev {
-                // Sigh, we don't have if not let...
-            } else {
-                // Debug output all events except ping response
-                debug!("Notification #{i} = {event:?}");
+            match ev {
+                Packet::PingResp => {
+                    // silent
+                }
+                _ => {
+                    // Debug output all other events
+                    debug!("Notification #{i} = {event:?}");
+                }
             }
 
             if let Packet::Publish(p) = ev {
                 // Whoa, we actually have a message to process
                 info!("Publish #{i} = {p:?}");
                 let mut topic = p.topic.as_str();
-                if let Some(i) = topic.find('/') {
-                    // ignore all chars from topic until first '/' if there is one
-                    topic = &topic[i + 1..];
+                if let Some((_pre, post)) = topic.split_once('/') {
+                    topic = post;
                 }
                 let msg = String::from_utf8_lossy(&p.payload);
                 debug!("Payload #{i} = {topic} -- {msg}");
-                handle_msg(&opts.coap_url, topic, msg);
+                if let Err(e) = handle_msg(&opts.coap_url, topic, msg) {
+                    error!("Message handling error: {e}");
+                }
             }
         }
     }
 }
 
-fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3)
+fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3) -> anyhow::Result<()>
 where
     S1: AsRef<str> + Display,
     S2: AsRef<str> + Display,
@@ -79,7 +85,7 @@ where
     for (k, v) in json.as_object().unwrap() {
         debug!("JSON {k:?} = {v:?}");
         let key = format!("{topic}/{k}");
-        let mut f: f64 = 0.0;
+        let mut f = 0.0;
         let mut can_send = false;
         if v.is_f64() {
             f = v.as_f64().unwrap();
@@ -91,10 +97,7 @@ where
             f = v.as_u64().unwrap() as f64;
             can_send = true;
         } else if v.is_boolean() {
-            f = 0.0;
-            if v.as_bool().unwrap() {
-                f = 1.0;
-            }
+            f = if v.as_bool().unwrap() { 1.0 } else { 0.0 };
             can_send = true;
         } else if v.is_string() {
             let s = v.as_str().unwrap();
@@ -105,22 +108,23 @@ where
             can_send = true;
         }
         if can_send {
-            coap_send(coap_url.as_ref(), &key, f);
+            return coap_send(coap_url.as_ref(), &key, f);
         }
     }
+    Err(anyhow!("Could not parse msg"))
 }
 
-fn coap_send<S1, S2>(url: S1, key: S2, value: f64)
+fn coap_send<S1, S2>(url: S1, key: S2, value: f64) -> anyhow::Result<()>
 where
     S1: AsRef<str> + Display,
     S2: AsRef<str> + Display,
 {
     let payload = format!("{key} {value:.2}");
     info!("*** CoAP POST {url} <-- {payload}");
-    let coap_result =
-        CoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(2, 0));
-    if let Err(e) = coap_result {
-        error!("CoAP error: {e:?}");
-    }
+
+    let res =
+        CoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(2, 0))?;
+    info!("<-- {res:?}");
+    Ok(())
 }
 // EOF

@@ -43,17 +43,18 @@ impl OptsCommon {
             LevelFilter::Error
         }
     }
-}
+    pub fn start_pgm(&self, name: &str) {
+        env_logger::Builder::new()
+            .filter_module(env!("CARGO_PKG_NAME"), self.get_loglevel())
+            .filter_module(name, self.get_loglevel())
+            .format_timestamp_secs()
+            .init();
 
-pub fn start_pgm(c: &OptsCommon, desc: &str) {
-    env_logger::Builder::new()
-        .filter_level(c.get_loglevel())
-        .format_timestamp_secs()
-        .init();
-    info!("Starting up {desc}...");
-    debug!("Git branch: {}", env!("GIT_BRANCH"));
-    debug!("Git commit: {}", env!("GIT_COMMIT"));
-    debug!("Source timestamp: {}", env!("SOURCE_TIMESTAMP"));
-    debug!("Compiler version: {}", env!("RUSTC_VERSION"));
+        info!("Starting up {name} v{}...", env!("CARGO_PKG_VERSION"));
+        debug!("Git branch: {}", env!("GIT_BRANCH"));
+        debug!("Git commit: {}", env!("GIT_COMMIT"));
+        debug!("Source timestamp: {}", env!("SOURCE_TIMESTAMP"));
+        debug!("Compiler version: {}", env!("RUSTC_VERSION"));
+    }
 }
 // EOF
