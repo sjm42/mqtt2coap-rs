@@ -1,7 +1,5 @@
 // main.rs
 
-// use anyhow::bail;
-use anyhow::anyhow;
 use coap::CoAPClient;
 use log::*;
 use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
@@ -108,10 +106,12 @@ where
             can_send = true;
         }
         if can_send {
-            return coap_send(coap_url.as_ref(), &key, f);
+            coap_send(coap_url.as_ref(), &key, f)?;
+        } else {
+            error!("Could not parse json value: {v:?}");
         }
     }
-    Err(anyhow!("Could not parse msg"))
+    Ok(())
 }
 
 fn coap_send<S1, S2>(url: S1, key: S2, value: f64) -> anyhow::Result<()>
