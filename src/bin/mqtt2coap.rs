@@ -1,5 +1,6 @@
 // main.rs
 
+use anyhow::*;
 use coap::CoAPClient;
 use log::*;
 use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
@@ -80,25 +81,29 @@ where
 {
     let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
     debug!("Json = {topic} -- {json:?}");
-    for (k, v) in json.as_object().unwrap() {
+    for (k, v) in json.as_object().ok_or_else(|| anyhow!("json error"))? {
         debug!("JSON {k:?} = {v:?}");
         let key = format!("{topic}/{k}");
         let mut f = 0.0;
         let mut can_send = false;
         if v.is_f64() {
-            f = v.as_f64().unwrap();
+            f = v.as_f64().unwrap_or_default();
             can_send = true;
         } else if v.is_i64() {
-            f = v.as_i64().unwrap() as f64;
+            f = v.as_i64().unwrap_or_default() as f64;
             can_send = true;
         } else if v.is_u64() {
-            f = v.as_u64().unwrap() as f64;
+            f = v.as_u64().unwrap_or_default() as f64;
             can_send = true;
         } else if v.is_boolean() {
-            f = if v.as_bool().unwrap() { 1.0 } else { 0.0 };
+            f = if v.as_bool().unwrap_or_default() {
+                1.0
+            } else {
+                0.0
+            };
             can_send = true;
         } else if v.is_string() {
-            let s = v.as_str().unwrap();
+            let s = v.as_str().unwrap_or_default();
             f = match s.to_ascii_lowercase().as_str() {
                 "on" | "1" | "true" => 1.0,
                 _ => 0.0,
