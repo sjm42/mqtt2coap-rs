@@ -469,7 +469,7 @@ dependencies = [
 
 [[package]]
 name = "mqtt2coap"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "build-data",

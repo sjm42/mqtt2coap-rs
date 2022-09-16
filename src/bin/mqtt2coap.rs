@@ -50,23 +50,23 @@ async fn run_mqtt(
                 Packet::PingResp => {
                     // silent
                 }
+                Packet::Publish(p) => {
+                    // Whoa, we actually have a message to process
+                    info!("Publish #{i} = {p:?}");
+                    let mut topic = p.topic.as_str();
+                    if let Some((_pre, post)) = topic.split_once('/') {
+                        // strip prefix if found
+                        topic = post;
+                    }
+                    let msg = String::from_utf8_lossy(&p.payload);
+                    debug!("Payload #{i} = {topic} -- {msg}");
+                    if let Err(e) = handle_msg(&opts.coap_url, topic, msg) {
+                        error!("Message handling error: {e}");
+                    }
+                }
                 _ => {
                     // Debug output all other events
                     debug!("Notification #{i} = {event:?}");
-                }
-            }
-
-            if let Packet::Publish(p) = ev {
-                // Whoa, we actually have a message to process
-                info!("Publish #{i} = {p:?}");
-                let mut topic = p.topic.as_str();
-                if let Some((_pre, post)) = topic.split_once('/') {
-                    topic = post;
-                }
-                let msg = String::from_utf8_lossy(&p.payload);
-                debug!("Payload #{i} = {topic} -- {msg}");
-                if let Err(e) = handle_msg(&opts.coap_url, topic, msg) {
-                    error!("Message handling error: {e}");
                 }
             }
         }
@@ -84,37 +84,25 @@ where
     for (k, v) in json.as_object().ok_or_else(|| anyhow!("json error"))? {
         debug!("JSON {k:?} = {v:?}");
         let key = format!("{topic}/{k}");
-        let mut f = 0.0;
-        let mut can_send = false;
-        if v.is_f64() {
-            f = v.as_f64().unwrap_or_default();
-            can_send = true;
-        } else if v.is_i64() {
-            f = v.as_i64().unwrap_or_default() as f64;
-            can_send = true;
-        } else if v.is_u64() {
-            f = v.as_u64().unwrap_or_default() as f64;
-            can_send = true;
-        } else if v.is_boolean() {
-            f = if v.as_bool().unwrap_or_default() {
+
+        let f = if let Some(x) = v.as_f64() {
+            x
+        } else if let Some(b) = v.as_bool() {
+            if b {
                 1.0
             } else {
                 0.0
-            };
-            can_send = true;
-        } else if v.is_string() {
-            let s = v.as_str().unwrap_or_default();
-            f = match s.to_ascii_lowercase().as_str() {
+            }
+        } else if let Some(s) = v.as_str() {
+            match s.to_ascii_lowercase().as_str() {
                 "on" | "1" | "true" => 1.0,
                 _ => 0.0,
-            };
-            can_send = true;
-        }
-        if can_send {
-            coap_send(coap_url.as_ref(), &key, f)?;
+            }
         } else {
             error!("Could not parse json value: {v:?}");
-        }
+            continue;
+        };
+        coap_send(coap_url.as_ref(), &key, f)?;
     }
     Ok(())
 }
