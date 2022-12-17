@@ -102,7 +102,7 @@ where
             error!("Could not parse json value: {v:?}");
             continue;
         };
-        coap_send(coap_url.as_ref(), &key, f)?;
+        coap_send(coap_url.as_ref(), key.as_str(), f)?;
     }
     Ok(())
 }
