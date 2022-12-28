@@ -6,13 +6,12 @@ edition = "2021"
 resolver = "2"
 readme = "README.md"
 name = "mqtt2coap"
-version = "0.1.8"
+version = "0.1.9"
 
 
 [dependencies]
 anyhow = "1.0"
 coap = "0.12"
-coap-lite = "0.9.1"
 env_logger = "0.10"
 log = "0.4"
 rumqttc = "0.18"

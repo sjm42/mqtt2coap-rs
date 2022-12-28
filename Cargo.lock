@@ -595,12 +595,11 @@ dependencies = [
 
 [[package]]
 name = "mqtt2coap"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "anyhow",
  "build-data",
  "coap",
- "coap-lite",
  "env_logger",
  "log",
  "rumqttc",
