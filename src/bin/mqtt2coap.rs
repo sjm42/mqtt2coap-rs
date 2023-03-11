@@ -11,19 +11,18 @@ use structopt::StructOpt;
 
 use mqtt2coap::*;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let mut opts = OptsCommon::from_args();
     opts.finish()?;
     opts.start_pgm(env!("CARGO_BIN_NAME"));
     debug!("Runtime config:\n{opts:#?}");
 
-    let runtime = tokio::runtime::Runtime::new()?;
-
     let mut mqttoptions = MqttOptions::new("mqtt2coap", &opts.mqtt_host, opts.mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(25));
 
     let (client, eventloop) = AsyncClient::new(mqttoptions, 42);
-    runtime.block_on(async move { run_mqtt(&opts, client, eventloop).await })
+    run_mqtt(&opts, client, eventloop).await
 }
 
 async fn run_mqtt(
@@ -116,7 +115,7 @@ where
     info!("*** CoAP POST {url} <-- {payload}");
 
     let res =
-        CoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(2, 0))?;
+        CoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(5, 0))?;
     info!("<-- {res:?}");
     Ok(())
 }
