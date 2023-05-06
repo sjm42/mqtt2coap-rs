@@ -3,7 +3,7 @@
 use anyhow::*;
 use coap::CoAPClient;
 use log::*;
-use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
+use rumqttc::{Event, EventLoop, MqttOptions, Packet, QoS};
 use serde_json::json;
 use serde_json::Value;
 use std::{fmt::Display, time::Duration};
@@ -21,13 +21,13 @@ async fn main() -> anyhow::Result<()> {
     let mut mqttoptions = MqttOptions::new("mqtt2coap", &opts.mqtt_host, opts.mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(25));
 
-    let (client, eventloop) = AsyncClient::new(mqttoptions, 42);
+    let (client, eventloop) = rumqttc::AsyncClient::new(mqttoptions, 42);
     run_mqtt(&opts, client, eventloop).await
 }
 
 async fn run_mqtt(
     opts: &OptsCommon,
-    client: AsyncClient,
+    client: rumqttc::AsyncClient,
     mut eventloop: EventLoop,
 ) -> anyhow::Result<()> {
     let prefix = &opts.topic_prefix;
@@ -57,11 +57,17 @@ async fn run_mqtt(
                         // strip prefix if found
                         topic = post;
                     }
-                    let msg = String::from_utf8_lossy(&p.payload);
+
+                    let url = opts.coap_url.clone();
+                    let topic = topic.to_string();
+                    let msg = String::from_utf8_lossy(&p.payload).to_string();
                     debug!("Payload #{i} = {topic} -- {msg}");
-                    if let Err(e) = handle_msg(&opts.coap_url, topic, msg) {
-                        error!("Message handling error: {e}");
-                    }
+                    // Spawn a separate task for handling the CoAP stuff to avoid blocking main loop
+                    tokio::task::spawn_blocking(move || {
+                        if let Err(e) = handle_msg(url, topic, msg) {
+                            error!("Message handling error: {e}");
+                        }
+                    });
                 }
                 _ => {
                     // Debug output all other events
