@@ -6,7 +6,7 @@ edition = "2021"
 resolver = "2"
 readme = "README.md"
 name = "mqtt2coap"
-version = "0.1.16"
+version = "0.1.17"
 
 
 [dependencies]
@@ -18,7 +18,7 @@ rumqttc = "0.22"
 serde_json = "1.0"
 shellexpand = { version = "3.1", features = ["full"] }
 structopt = "0.3"
-tokio = "1.28"
+tokio = "1.29"
 
 
 [build-dependencies]
