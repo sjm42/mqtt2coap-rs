@@ -18,8 +18,10 @@ async fn main() -> anyhow::Result<()> {
     opts.start_pgm(env!("CARGO_BIN_NAME"));
     debug!("Runtime config:\n{opts:#?}");
 
-    let mut mqttoptions = MqttOptions::new("mqtt2coap", &opts.mqtt_host, opts.mqtt_port);
-    mqttoptions.set_keep_alive(Duration::from_secs(25));
+    let mut mqttoptions = MqttOptions::new(env!("CARGO_BIN_NAME"), &opts.mqtt_host, opts.mqtt_port);
+    mqttoptions
+        .set_keep_alive(Duration::from_secs(25))
+        .set_clean_session(true);
 
     let (client, eventloop) = rumqttc::AsyncClient::new(mqttoptions, 42);
     run_mqtt(&opts, client, eventloop).await
@@ -42,7 +44,13 @@ async fn run_mqtt(
     let mut i: usize = 0;
     loop {
         i += 1;
-        let event = eventloop.poll().await?;
+        let res = eventloop.poll().await;
+        if let Err(e) = res {
+            error!("MQTT event error: {e}");
+            continue;
+        }
+
+        let event = res.unwrap();
         trace!("mqtt event: {event:?}");
         if let Event::Incoming(ev) = &event {
             match ev {
@@ -52,6 +60,7 @@ async fn run_mqtt(
                 Packet::Publish(p) => {
                     // Whoa, we actually have a message to process
                     info!("Publish #{i} = {p:?}");
+
                     let mut topic = p.topic.as_str();
                     if let Some((_pre, post)) = topic.split_once('/') {
                         // strip prefix if found
