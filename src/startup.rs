@@ -1,28 +1,28 @@
 // startup.rs
 
+use clap::Parser;
 use log::*;
 use std::env;
-use structopt::StructOpt;
 
-#[derive(Clone, Debug, Default, StructOpt)]
+#[derive(Clone, Debug, Default, Parser)]
 pub struct OptsCommon {
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub verbose: bool,
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub debug: bool,
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub trace: bool,
 
-    #[structopt(long, short = "m", default_value = "localhost")]
+    #[arg(long, default_value = "localhost")]
     pub mqtt_host: String,
-    #[structopt(long, short = "p", default_value = "1883")]
+    #[arg(long, default_value_t = 1883)]
     pub mqtt_port: u16,
-    #[structopt(long, default_value = "")]
+    #[arg(long, default_value = "")]
     pub topic_prefix: String,
-    #[structopt(long, default_value = "test123")]
+    #[arg(long, default_value = "test123")]
     pub topics: String,
 
-    #[structopt(long, default_value = "coap://localhost/store_data")]
+    #[arg(long, default_value = "coap://localhost/store_data")]
     pub coap_url: String,
 }
 

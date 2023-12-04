@@ -1,19 +1,19 @@
 // main.rs
 
 use anyhow::*;
+use clap::Parser;
 use coap::CoAPClient;
 use log::*;
 use rumqttc::{Event, EventLoop, MqttOptions, Packet, QoS};
 use serde_json::json;
 use serde_json::Value;
 use std::{fmt::Display, time::Duration};
-use structopt::StructOpt;
 
 use mqtt2coap::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut opts = OptsCommon::from_args();
+    let mut opts = OptsCommon::parse();
     opts.finish()?;
     opts.start_pgm(env!("CARGO_BIN_NAME"));
     debug!("Runtime config:\n{opts:#?}");
