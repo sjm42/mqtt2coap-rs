@@ -2,7 +2,7 @@
 
 use anyhow::*;
 use clap::Parser;
-use coap::CoAPClient;
+use coap::UdpCoAPClient;
 use log::*;
 use rumqttc::{Event, EventLoop, MqttOptions, Packet, QoS};
 use serde_json::json;
@@ -71,12 +71,10 @@ async fn run_mqtt(
                     let topic = topic.to_string();
                     let msg = String::from_utf8_lossy(&p.payload).to_string();
                     debug!("Payload #{i} = {topic} -- {msg}");
-                    // Spawn a separate task for handling the CoAP stuff to avoid blocking main loop
-                    tokio::task::spawn_blocking(move || {
-                        if let Err(e) = handle_msg(url, topic, msg) {
-                            error!("Message handling error: {e}");
-                        }
-                    });
+
+                    if let Err(e) = handle_msg(url, topic, msg).await {
+                        error!("Message handling error: {e}");
+                    }
                 }
                 _ => {
                     // Debug output all other events
@@ -87,7 +85,7 @@ async fn run_mqtt(
     }
 }
 
-fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3) -> anyhow::Result<()>
+async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3) -> anyhow::Result<()>
 where
     S1: AsRef<str> + Display,
     S2: AsRef<str> + Display,
@@ -116,12 +114,12 @@ where
             error!("Could not parse json value: {v:?}");
             continue;
         };
-        coap_send(coap_url.as_ref(), key.as_str(), f)?;
+        coap_send(coap_url.as_ref(), key.as_str(), f).await?;
     }
     Ok(())
 }
 
-fn coap_send<S1, S2>(url: S1, key: S2, value: f64) -> anyhow::Result<()>
+async fn coap_send<S1, S2>(url: S1, key: S2, value: f64) -> anyhow::Result<()>
 where
     S1: AsRef<str> + Display,
     S2: AsRef<str> + Display,
@@ -130,7 +128,8 @@ where
     info!("*** CoAP POST {url} <-- {payload}");
 
     let res =
-        CoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(5, 0))?;
+        UdpCoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(5, 0))
+            .await?;
     info!("<-- {res:?}");
     Ok(())
 }
