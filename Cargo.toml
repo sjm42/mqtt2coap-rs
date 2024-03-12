@@ -6,12 +6,12 @@ edition = "2021"
 resolver = "2"
 readme = "README.md"
 name = "mqtt2coap"
-version = "1.0.1"
+version = "1.0.2"
 
 
 [dependencies]
 anyhow = "1"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
 coap = "0.14"
 env_logger = "0"
 log = "0"
@@ -22,12 +22,12 @@ tokio = "1"
 
 
 [build-dependencies]
-build-data = "0.1"
+build-data = "0"
 
 
 [profile.release]
 opt-level = 3
 codegen-units = 1
-lto = true
+lto = "fat"
 
 # EOF

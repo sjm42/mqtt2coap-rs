@@ -72,9 +72,7 @@ async fn run_mqtt(
                     let msg = String::from_utf8_lossy(&p.payload).to_string();
                     debug!("Payload #{i} = {topic} -- {msg}");
 
-                    if let Err(e) = handle_msg(url, topic, msg).await {
-                        error!("Message handling error: {e}");
-                    }
+                    tokio::spawn(handle_msg(url, topic, msg));
                 }
                 _ => {
                     // Debug output all other events
@@ -114,7 +112,9 @@ where
             error!("Could not parse json value: {v:?}");
             continue;
         };
-        coap_send(coap_url.as_ref(), key.as_str(), f).await?;
+        if let Err(e) = coap_send(coap_url.as_ref(), key.as_str(), f).await {
+            error!("CoAP send error: {e}");
+        }
     }
     Ok(())
 }
