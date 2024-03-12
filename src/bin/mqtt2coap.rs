@@ -72,7 +72,7 @@ async fn run_mqtt(
                     let msg = String::from_utf8_lossy(&p.payload).to_string();
                     debug!("Payload #{i} = {topic} -- {msg}");
 
-                    tokio::spawn(handle_msg(url, topic, msg));
+                    tokio::spawn(handle_msg(url, topic, msg, i));
                 }
                 _ => {
                     // Debug output all other events
@@ -83,7 +83,7 @@ async fn run_mqtt(
     }
 }
 
-async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3) -> anyhow::Result<()>
+async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3, i: usize) -> anyhow::Result<()>
 where
     S1: AsRef<str> + Display,
     S2: AsRef<str> + Display,
@@ -112,23 +112,23 @@ where
             error!("Could not parse json value: {v:?}");
             continue;
         };
-        if let Err(e) = coap_send(coap_url.as_ref(), key.as_str(), f).await {
-            error!("CoAP send error: {e}");
+        if let Err(e) = coap_send(coap_url.as_ref(), key.as_str(), f, i).await {
+            error!("CoAP send error: #{i} {e}");
         }
     }
     Ok(())
 }
 
-async fn coap_send<S1, S2>(url: S1, key: S2, value: f64) -> anyhow::Result<()>
+async fn coap_send<S1, S2>(url: S1, key: S2, value: f64, i: usize) -> anyhow::Result<()>
 where
     S1: AsRef<str> + Display,
     S2: AsRef<str> + Display,
 {
     let payload = format!("{key} {value:.2}");
-    info!("*** CoAP POST {url} <-- {payload}");
+    info!("*** #{i} CoAP POST {url} <-- {payload}");
 
     let res =
-        UdpCoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(5, 0))
+        UdpCoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(30, 0))
             .await?;
     info!("<-- {res:?}");
     Ok(())
