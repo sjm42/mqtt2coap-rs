@@ -29,9 +29,10 @@ pub struct OptsCommon {
 }
 
 impl OptsCommon {
-    pub fn finish(&mut self) -> anyhow::Result<()> {
+    pub fn finalize(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
+
     pub fn get_loglevel(&self) -> Level {
         if self.trace {
             Level::TRACE
