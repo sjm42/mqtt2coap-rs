@@ -1,6 +1,9 @@
 // lib.rs
 
-pub mod startup;
+pub use tracing::*;
+
 pub use startup::*;
+
+pub mod startup;
 
 // EOF

@@ -1,13 +1,13 @@
 // main.rs
 
+use std::{fmt::Display, time::Duration};
+
 use anyhow::*;
 use clap::Parser;
 use coap::UdpCoAPClient;
-use log::*;
 use rumqttc::{Event, EventLoop, MqttOptions, Packet, QoS};
 use serde_json::json;
 use serde_json::Value;
-use std::{fmt::Display, time::Duration};
 
 use mqtt2coap::*;
 
@@ -84,10 +84,10 @@ async fn run_mqtt(
 }
 
 async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3, i: usize) -> anyhow::Result<()>
-where
-    S1: AsRef<str> + Display,
-    S2: AsRef<str> + Display,
-    S3: AsRef<str> + Display,
+    where
+        S1: AsRef<str> + Display,
+        S2: AsRef<str> + Display,
+        S3: AsRef<str> + Display,
 {
     let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
     debug!("Json = {topic} -- {json:?}");
@@ -120,9 +120,9 @@ where
 }
 
 async fn coap_send<S1, S2>(url: S1, key: S2, value: f64, i: usize) -> anyhow::Result<()>
-where
-    S1: AsRef<str> + Display,
-    S2: AsRef<str> + Display,
+    where
+        S1: AsRef<str> + Display,
+        S2: AsRef<str> + Display,
 {
     let payload = format!("{key} {value:.2}");
     info!("*** #{i} CoAP POST {url} <-- {payload}");

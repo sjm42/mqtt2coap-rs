@@ -1,8 +1,10 @@
 // startup.rs
 
-use clap::Parser;
-use log::*;
 use std::env;
+
+use clap::Parser;
+
+use crate::*;
 
 #[derive(Clone, Debug, Default, Parser)]
 pub struct OptsCommon {
@@ -28,29 +30,27 @@ pub struct OptsCommon {
 
 impl OptsCommon {
     pub fn finish(&mut self) -> anyhow::Result<()> {
-        // self.blah = shellexpand::full(&self.blah)?.into_owned();
-
         Ok(())
     }
-    pub fn get_loglevel(&self) -> LevelFilter {
+    pub fn get_loglevel(&self) -> Level {
         if self.trace {
-            LevelFilter::Trace
+            Level::TRACE
         } else if self.debug {
-            LevelFilter::Debug
+            Level::DEBUG
         } else if self.verbose {
-            LevelFilter::Info
+            Level::INFO
         } else {
-            LevelFilter::Error
+            Level::ERROR
         }
     }
+
     pub fn start_pgm(&self, name: &str) {
-        env_logger::Builder::new()
-            .filter_module(env!("CARGO_PKG_NAME"), self.get_loglevel())
-            .filter_module(name, self.get_loglevel())
-            .format_timestamp_secs()
+        tracing_subscriber::fmt()
+            .with_max_level(self.get_loglevel())
+            .with_target(false)
             .init();
 
-        info!("Starting up {name} v{}...", env!("CARGO_PKG_VERSION"));
+        info!("Starting up {name} v{}...",  env!("CARGO_PKG_VERSION"));
         debug!("Git branch: {}", env!("GIT_BRANCH"));
         debug!("Git commit: {}", env!("GIT_COMMIT"));
         debug!("Source timestamp: {}", env!("SOURCE_TIMESTAMP"));
