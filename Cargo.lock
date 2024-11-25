@@ -399,7 +399,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d72f4fbcb650652c4b7d980390cf8af49a738422ac66718bd516ec3430b83a6"
 dependencies = [
  "coap-message 0.2.3",
- "coap-message 0.3.5",
+ "coap-message 0.3.6",
  "lru_time_cache",
 ]
 
@@ -411,9 +411,9 @@ checksum = "7cc888e15f6be910b58fda4f056f673f58fb9348ea45da014283a14e6d2b58ec"
 
 [[package]]
 name = "coap-message"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8e71be881af331e95d3fa2a6d5bbebb2444f8ec29ebe9ed9837b22a1eaf790f"
+checksum = "185d26bfc9862ae17a065d361725e2301072125cb7200836d4b795285fded1f7"
 dependencies = [
  "num-traits",
 ]
