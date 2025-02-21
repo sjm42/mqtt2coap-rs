@@ -2,17 +2,17 @@
 
 [package]
 authors = ["Sami J. Mäkinen <sjm@iki.fi>"]
-edition = "2021"
+edition = "2024"
 resolver = "2"
 readme = "README.md"
 name = "mqtt2coap"
-version = "1.1.0"
+version = "1.2.0"
 
 
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
-coap = "0.17"
+coap = "0.19"
 rumqttc = "0.24"
 serde_json = "1"
 tokio = "1"
