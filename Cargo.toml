@@ -6,7 +6,7 @@ edition = "2024"
 resolver = "2"
 readme = "README.md"
 name = "mqtt2coap"
-version = "1.2.0"
+version = "1.2.1"
 
 
 [dependencies]
@@ -21,6 +21,7 @@ tracing-subscriber = "0"
 
 
 [build-dependencies]
+anyhow = "1"
 build-data = "0"
 
 
