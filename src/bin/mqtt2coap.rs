@@ -2,12 +2,11 @@
 
 use std::{fmt::Display, time::Duration};
 
-use anyhow::*;
+use anyhow::anyhow;
 use clap::Parser;
 use coap::UdpCoAPClient;
 use rumqttc::{Event, EventLoop, MqttOptions, Packet, QoS};
-use serde_json::json;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use mqtt2coap::*;
 
@@ -44,13 +43,15 @@ async fn run_mqtt(
     let mut i: usize = 0;
     loop {
         i += 1;
-        let res = eventloop.poll().await;
-        if let Err(e) = res {
-            error!("MQTT event error: {e}");
-            continue;
-        }
 
-        let event = res.unwrap();
+        let event = match eventloop.poll().await {
+            Err(e) => {
+                error!("MQTT event error: {e}");
+                continue;
+            }
+            Ok(ev) => ev,
+        };
+
         trace!("mqtt event: {event:?}");
         if let Event::Incoming(ev) = &event {
             match ev {
@@ -84,10 +85,10 @@ async fn run_mqtt(
 }
 
 async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3, i: usize) -> anyhow::Result<()>
-    where
-        S1: AsRef<str> + Display,
-        S2: AsRef<str> + Display,
-        S3: AsRef<str> + Display,
+where
+    S1: AsRef<str> + Display,
+    S2: AsRef<str> + Display,
+    S3: AsRef<str> + Display,
 {
     let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
     debug!("Json = {topic} -- {json:?}");
@@ -98,11 +99,7 @@ async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3, i: usize) -> a
         let f = if let Some(x) = v.as_f64() {
             x
         } else if let Some(b) = v.as_bool() {
-            if b {
-                1.0
-            } else {
-                0.0
-            }
+            if b { 1.0 } else { 0.0 }
         } else if let Some(s) = v.as_str() {
             match s.to_ascii_lowercase().as_str() {
                 "on" | "1" | "true" => 1.0,
@@ -120,9 +117,9 @@ async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3, i: usize) -> a
 }
 
 async fn coap_send<S1, S2>(url: S1, key: S2, value: f64, i: usize) -> anyhow::Result<()>
-    where
-        S1: AsRef<str> + Display,
-        S2: AsRef<str> + Display,
+where
+    S1: AsRef<str> + Display,
+    S2: AsRef<str> + Display,
 {
     let payload = format!("{key} {value:.2}");
     info!("*** #{i} CoAP POST {url} <-- {payload}");
