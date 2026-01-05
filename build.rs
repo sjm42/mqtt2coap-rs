@@ -1,6 +1,5 @@
 // build.rs
 
-// https://docs.rs/build-data/0.1.3/build_data/
 fn main() -> anyhow::Result<()> {
     let _ = build_data::set_GIT_BRANCH();
     let _ = build_data::set_GIT_COMMIT();

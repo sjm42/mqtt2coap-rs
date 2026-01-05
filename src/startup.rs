@@ -1,9 +1,5 @@
 // startup.rs
 
-use std::env;
-
-use clap::Parser;
-
 use crate::*;
 
 #[derive(Clone, Debug, Default, Parser)]
@@ -29,10 +25,6 @@ pub struct OptsCommon {
 }
 
 impl OptsCommon {
-    pub fn finalize(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
     pub fn get_loglevel(&self) -> Level {
         if self.trace {
             Level::TRACE
@@ -45,9 +37,11 @@ impl OptsCommon {
         }
     }
 
-    pub fn start_pgm(&self, name: &str) {
+    pub fn new(name: &str) -> Self {
+        let opts = Self::parse();
+
         tracing_subscriber::fmt()
-            .with_max_level(self.get_loglevel())
+            .with_max_level(opts.get_loglevel())
             .with_target(false)
             .init();
 
@@ -56,6 +50,7 @@ impl OptsCommon {
         debug!("Git commit: {}", env!("GIT_COMMIT"));
         debug!("Source timestamp: {}", env!("SOURCE_TIMESTAMP"));
         debug!("Compiler version: {}", env!("RUSTC_VERSION"));
+        opts
     }
 }
 // EOF

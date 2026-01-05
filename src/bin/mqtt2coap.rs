@@ -1,36 +1,23 @@
-// main.rs
+// bin/mqtt2coap.rs
 
-use std::{fmt::Display, time::Duration};
-
-use anyhow::anyhow;
-use clap::Parser;
 use coap::UdpCoAPClient;
-use rumqttc::{Event, EventLoop, MqttOptions, Packet, QoS};
+use rumqttc::{Event, MqttOptions, Packet, QoS};
 use serde_json::{json, Value};
 
 use mqtt2coap::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut opts = OptsCommon::parse();
-    opts.finalize()?;
-    opts.start_pgm(env!("CARGO_BIN_NAME"));
+    let me = env!("CARGO_BIN_NAME");
+    let opts = OptsCommon::new(me);
     debug!("Runtime config:\n{opts:#?}");
 
-    let mut mqttoptions = MqttOptions::new(env!("CARGO_BIN_NAME"), &opts.mqtt_host, opts.mqtt_port);
+    let mut mqttoptions = MqttOptions::new(me, &opts.mqtt_host, opts.mqtt_port);
     mqttoptions
         .set_keep_alive(Duration::from_secs(25))
         .set_clean_session(true);
 
-    let (client, eventloop) = rumqttc::AsyncClient::new(mqttoptions, 42);
-    run_mqtt(&opts, client, eventloop).await
-}
-
-async fn run_mqtt(
-    opts: &OptsCommon,
-    client: rumqttc::AsyncClient,
-    mut eventloop: EventLoop,
-) -> anyhow::Result<()> {
+    let (client, mut eventloop) = rumqttc::AsyncClient::new(mqttoptions, 42);
     let prefix = &opts.topic_prefix;
 
     for topic in opts.topics.split(',') {
@@ -84,13 +71,8 @@ async fn run_mqtt(
     }
 }
 
-async fn handle_msg<S1, S2, S3>(coap_url: S1, topic: S2, msg: S3, i: usize) -> anyhow::Result<()>
-where
-    S1: AsRef<str> + Display,
-    S2: AsRef<str> + Display,
-    S3: AsRef<str> + Display,
-{
-    let json: Value = serde_json::from_str(msg.as_ref()).unwrap_or_else(|_| json!({}));
+async fn handle_msg(coap_url: String, topic: String, msg: String, i: usize) -> anyhow::Result<()> {
+    let json: Value = serde_json::from_str(&msg).unwrap_or_else(|_| json!({}));
     debug!("Json = {topic} -- {json:?}");
     for (k, v) in json.as_object().ok_or_else(|| anyhow!("json error"))? {
         debug!("JSON {k:?} = {v:?}");
@@ -109,24 +91,18 @@ where
             error!("Could not parse json value: {v:?}");
             continue;
         };
-        if let Err(e) = coap_send(coap_url.as_ref(), key.as_str(), f, i).await {
+        if let Err(e) = coap_send(&coap_url, key.as_str(), f, i).await {
             error!("CoAP send error: #{i} {e}");
         }
     }
     Ok(())
 }
 
-async fn coap_send<S1, S2>(url: S1, key: S2, value: f64, i: usize) -> anyhow::Result<()>
-where
-    S1: AsRef<str> + Display,
-    S2: AsRef<str> + Display,
-{
+async fn coap_send(url: &str, key: &str, value: f64, i: usize) -> anyhow::Result<()> {
     let payload = format!("{key} {value:.2}");
     info!("*** #{i} CoAP POST {url} <-- {payload}");
 
-    let res =
-        UdpCoAPClient::post_with_timeout(url.as_ref(), payload.into_bytes(), Duration::new(30, 0))
-            .await?;
+    let res = UdpCoAPClient::post_with_timeout(url, payload.into_bytes(), Duration::new(30, 0)).await?;
     info!("<-- {res:?}");
     Ok(())
 }
