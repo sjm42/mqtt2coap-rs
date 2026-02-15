@@ -6,13 +6,13 @@ edition = "2024"
 resolver = "2"
 readme = "README.md"
 name = "mqtt2coap"
-version = "1.2.3"
+version = "1.2.4"
 
 
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
-coap = "0.23"
+coap = "0.24"
 rumqttc = "0.25"
 serde_json = "1"
 tokio = "1"
