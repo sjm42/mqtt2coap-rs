@@ -2,7 +2,7 @@
 
 use coap::UdpCoAPClient;
 use rumqttc::{Event, MqttOptions, Packet, QoS};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use mqtt2coap::*;
 

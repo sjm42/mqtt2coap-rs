@@ -35,7 +35,16 @@ The first path segment of the MQTT topic is stripped (treated as a prefix), so `
 Requires stable Rust toolchain.
 
 ```bash
+cargo build
 cargo build --release
+```
+
+Run checks before submitting changes:
+
+```bash
+cargo fmt
+cargo clippy --all-targets --all-features
+cargo test
 ```
 
 ### Cross-compilation
@@ -43,11 +52,12 @@ cargo build --release
 A helper script supports x86_64 and ARMv7 (Raspberry Pi) targets:
 
 ```bash
+./build pc build         # x86_64-unknown-linux-gnu debug build
 ./build pc release       # x86_64-unknown-linux-gnu
 ./build raspi release    # armv7-unknown-linux-gnueabihf
 ```
 
-ARM targets require the appropriate cross-linker (configured in `.cargo/config.toml`).
+ARM targets require the appropriate Rust target and cross-linker configuration in the local build environment.
 
 ## Usage
 
