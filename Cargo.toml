@@ -12,7 +12,7 @@ version = "1.2.5"
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
-coap = "0.26"
+coap = { version = "0.26", default-features = false }
 rumqttc = "0.25"
 serde_json = "1"
 tokio = "1"
